@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+  <script>
+    const socket = io('http://localhost:8080');
+
+    socket.on('connect', () => {
+      console.log('Connected to server');
+      // You can emit events or perform actions on connection
+    });
+
+    socket.on('chat', (data) => {
+      console.log(data);
+    });
+
+
+
+    function sendMessage() {
+        const message = prompt('Enter your message:');
+        socket.emit('chat', message);
+    }
+
+    // Handle other socket events here
+
+  </script>
+  <button onclick="sendMessage()">load a youtube URL</button>
+</body>
+</html>
