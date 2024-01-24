@@ -1,5 +1,6 @@
 import importlib,os
 from socketio import AsyncServer
+from .utils import file_exist, extract_video_id, data_path
 
 class Proxy:
     __classes = {}
@@ -18,4 +19,8 @@ class Proxy:
             #print(chunk.text)
             await self.__sio.emit('chat', {"id":message_id,"content":chunk.text} , room=sid)
     async def download(self, sid: str,  message_id: str, url: str):
-        await self.__classes.get('youtube').download(url)
+        video_id = extract_video_id(url=url)
+        if video_id is not None:
+            if file_exist(os.path.join(data_path, video_id)) is not True:       
+                await self.__classes.get('youtube').download(video_id, url)
+                ##TODO load subtile contents to vector database
