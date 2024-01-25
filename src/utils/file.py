@@ -1,23 +1,34 @@
 import asyncio
 import io,os
 import webvtt
-from aiofiles import os as aioos
+import aiofiles
 
 env_path = os.getenv('DATA_PATH')
 data_path = os.path.join(os.path.abspath(os.curdir), 'data') if env_path is None else env_path
 def file_exist(filename: str):
     return os.path.exists(filename)
 
-async def get_file_contents(filename: str, sleeptime: int = 10):
-    while not file_exist(filename):
-        await asyncio.sleep(sleeptime)
-    async with aioos.open(filename, 'r') as file:
+async def get_file_contents(filename: str ):
+    # while not file_exist(filename):
+    #     await asyncio.sleep(sleeptime)
+    async with aiofiles.open(filename, mode='r') as file:
         contents = await file.read()
         return contents
-async def convert_vtt(filename: str):
-    contents = await get_file_contents(filename=filename)
-    buffer = io.StringIO(contents)
-    vtt = webvtt.read_buffer(buffer.read())
+
+async def get_vtt_file(folder_path: str, sleeptime: int = 10):
+    while not file_exist(folder_path):
+        await asyncio.sleep(sleeptime)    
+    files = os.listdir(folder_path)
+    vtt_files = [file for file in files if file.lower().endswith('.vtt')]  
+    if len(vtt_files) > 0:
+        contents = convert_vtt(os.path.join(folder_path, vtt_files[0]))
+        return contents
+    else:
+        return ""
+
+
+def convert_vtt(filename: str):
+    vtt = webvtt.read(filename)
     transcript = ""
     lines = []
     for line in vtt:

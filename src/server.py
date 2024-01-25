@@ -1,7 +1,7 @@
 import asyncio
 import json,socketio
 from dotenv import load_dotenv
-from src.proxy import Proxy
+from .proxy import Proxy
 
 load_dotenv()
 
@@ -24,6 +24,7 @@ async def message(sid, data):
 
 @sio.event
 async def download(sid, data):
+    print(data)
     try:
         message = json.loads(data)    
         await asyncio.create_task(proxy.download(sid,message["id"],message["url"]))
@@ -42,8 +43,3 @@ async def chat(sid, data):
 def disconnect(sid):
     print('disconnect ', sid)
 
-
-if __name__ == '__main__':
-    import uvicorn
-
-    uvicorn.run(app, host='localhost', port=8080)

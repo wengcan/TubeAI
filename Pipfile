@@ -15,6 +15,7 @@ python-dotenv = "*"
 python-socketio = "*"
 uvicorn = "*"
 aiofiles = "*"
+langchain-community = "*"
 
 [dev-packages]
 
