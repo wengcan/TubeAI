@@ -28,3 +28,7 @@ class Proxy:
             print("11")
             vtt_contents = await get_vtt_file(folder)
             self.__classes.get('langchain').add_documents(id_key=video_id,text=vtt_contents)
+    async def qa(self, video_id: str, question: str):
+        pass
+    async def all_video_ids(self):
+        pass
