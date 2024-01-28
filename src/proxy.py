@@ -1,6 +1,14 @@
-import importlib,os
+import importlib,os,uuid
+from enum import Enum
 from socketio import AsyncServer
 from .utils import file_exist, extract_video_id, data_path,get_vtt_file
+
+class MessageType(Enum):
+    DOWNLOAD = "download"
+    QA = "qa"
+    SUMMARY = "summary"
+    CHAT = "chat"
+
 
 class Proxy:
     __classes = {}
@@ -18,17 +26,32 @@ class Proxy:
         for chunk in response:
             #print(chunk.text)
             await self.__sio.emit('chat', {"id":message_id,"content":chunk.text} , room=sid)
-    async def download(self, sid: str,  message_id: str, url: str):
+    async def __download(self, url: str):
         video_id = extract_video_id(url=url)
         folder = os.path.join(data_path, 'youtube', video_id)
         if video_id is not None:
             if file_exist(folder) is not True:       
                 await self.__classes.get('youtube').download(folder, url)
         if self.__classes.get('langchain').id_exist(video_id) is not True: 
-            print("11")
             vtt_contents = await get_vtt_file(folder)
             self.__classes.get('langchain').add_documents(id_key=video_id,text=vtt_contents)
-    async def qa(self, video_id: str, question: str):
-        pass
-    async def all_video_ids(self):
-        pass
+    async def handle_message(self,sid: str, message: dict):
+        try:
+            message_id = uuid.uuid4()
+            type = message.get("type")
+
+            await self.__sio.emit('message', {"id": f'{message_id}'} , room=sid)
+            if type == MessageType.DOWNLOAD.value:
+                url = message.get("url")
+                video_id = await self.__download(url=url)
+                await self.__sio.emit('message', {"id":message_id, 'url': url, 'video_id':  video_id} , room=sid)
+            elif type == MessageType.SUMMARY.value:
+                video_id = message.get("video_id")
+                print(video_id)
+                result = self.__classes.get('langchain').query_documents(f'{video_id}/summaries')
+                print(result)
+                pass
+            pass
+        except Exception as e:
+            print(e)             
+

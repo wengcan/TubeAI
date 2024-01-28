@@ -18,31 +18,13 @@ def connect(sid, environ):
 
 @sio.event
 async def message(sid, data):
-    await sio.emit('response', f"Received your message: {data}", room=sid)
-
-
-@sio.event
-async def download(sid, data)
+    loop = asyncio.get_event_loop()
     try:
-        message = json.loads(data)    
-        await asyncio.create_task(proxy.download(sid,message["id"],message["url"]))
-    except Exception as e:
-        print(e)        
-@sio.event
-async def qa(sid, data):
-    try:
-        message = json.loads(data)    
-        await asyncio.create_task(proxy.qa(sid,message["id"],  message["url"]))
-    except Exception as e:
-        print(e)   
-
-@sio.event
-async def chat(sid, data):
-    try:
-        message = json.loads(data)
-        await asyncio.create_task(proxy.chat(sid,message["id"], message["content"]))
+        await loop.create_task(proxy.handle_message(sid= sid, message=json.loads(data)))
+        #await sio.emit('response', f"Received your message: {data}", room=sid)
     except Exception as e:
         print(e)
+
 
 @sio.event
 def disconnect(sid):

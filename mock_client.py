@@ -9,9 +9,9 @@ async def connect():
     print('connection established')
 
 @sio.event
-async def my_message(data):
+async def message(data):
     print('message received with ', data)
-    await sio.emit('my response', {'response': 'my response'})
+    # await sio.emit('my response', {'response': 'my response'})
 
 @sio.event
 async def disconnect():
@@ -20,7 +20,7 @@ async def disconnect():
 async def main():
     await sio.connect('http://localhost:8080')
     #await sio.wait()
-    await sio.emit('download', json.dumps({'id': '1234', 'url': 'https://www.youtube.com/watch?v=fx3ILcSV7a0&t=2s'}))
+    await sio.emit('message', json.dumps({'type':'download', 'url': 'https://www.youtube.com/watch?v=bIAfSxbVtSQ'}))
 
 if __name__ == '__main__':
     asyncio.run(main())

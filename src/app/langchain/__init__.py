@@ -15,13 +15,16 @@ from src.utils import data_path
 class MyLangChain:
     __vectorstore = None
     __store = None
+    __client = None
+    COLLECTION_NAME = "yt_documents"
     def __init__(self) -> None:
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=5000, chunk_overlap=20)
         self.child_text_splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=20)        
         self.__store = InMemoryByteStore()
+        # self.__client = chromadb.PersistentClient(path=os.path.join(data_path, 'chromadb'))
 
         self.__vectorstore = Chroma(
-            collection_name="yt_documents",
+            collection_name= MyLangChain.COLLECTION_NAME,
             embedding_function=GoogleGenerativeAIEmbeddings(model="models/embedding-001"),
             persist_directory=os.path.join(data_path, 'chromadb')
         )
@@ -49,6 +52,10 @@ class MyLangChain:
                 | ChatGoogleGenerativeAI(model="gemini-pro")
                 | StrOutputParser()
             )
+            ### TODO add safety_settings
             summaries = chain.batch(docs, {"max_concurrency": 5})
+            print(summaries)
             self.save_to_vectorstore(id_key=f'{id_key}/summaries', docs=summaries)
-    
+    def query_documents(self,id_key: str) -> any:
+        print(id_key)
+        return self.__vectorstore.get()
