@@ -20,7 +20,7 @@ async def disconnect():
 async def main():
     await sio.connect('http://localhost:8080')
     #await sio.wait()
-    await sio.emit('message', json.dumps({'type':'download', 'url': 'https://www.youtube.com/watch?v=bIAfSxbVtSQ'}))
+    await sio.emit('message', json.dumps({"type":"download", "url": "https://www.youtube.com/watch?v=bIAfSxbVtSQ"}))
 
 if __name__ == '__main__':
     asyncio.run(main())

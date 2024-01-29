@@ -10,7 +10,7 @@ from langchain_core.documents import Document
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
-from src.utils import data_path
+from src.utils import data_path, safety_settings
 
 class MyLangChain:
     __vectorstore = None
