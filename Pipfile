@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 langchain = "*"
 chromadb = "*"
-langchain-google-genai = "*"
 yt-dlp = "*"
 webvtt-py = "*"
 aiohttp = "*"
@@ -16,7 +15,7 @@ python-socketio = "*"
 uvicorn = "*"
 aiofiles = "*"
 langchain-community = "*"
-
+langchain-google-genai = {git = "https://github.com/wengcan/langchain.git", editable = true, subdirectory = "libs/partners/google-genai"}
 [dev-packages]
 
 [requires]

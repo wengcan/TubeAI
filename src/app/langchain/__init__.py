@@ -1,6 +1,7 @@
 import os,uuid
 from typing import List
 import chromadb
+import google.generativeai as genai
 from langchain.storage import InMemoryByteStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
@@ -15,13 +16,11 @@ from src.utils import data_path, safety_settings
 class MyLangChain:
     __vectorstore = None
     __store = None
-    __client = None
     COLLECTION_NAME = "yt_documents"
     def __init__(self) -> None:
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=5000, chunk_overlap=20)
         self.child_text_splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=20)        
         self.__store = InMemoryByteStore()
-        # self.__client = chromadb.PersistentClient(path=os.path.join(data_path, 'chromadb'))
 
         self.__vectorstore = Chroma(
             collection_name= MyLangChain.COLLECTION_NAME,
@@ -49,10 +48,9 @@ class MyLangChain:
             chain = (
                 {"doc": lambda x: x}
                 | ChatPromptTemplate.from_template("Summarize the following document:\n\n{doc}")
-                | ChatGoogleGenerativeAI(model="gemini-pro")
+                | ChatGoogleGenerativeAI(model="gemini-pro", safety_settings=safety_settings)
                 | StrOutputParser()
             )
-            ### TODO add safety_settings
             summaries = chain.batch(docs, {"max_concurrency": 5})
             print(summaries)
             self.save_to_vectorstore(id_key=f'{id_key}/summaries', docs=summaries)

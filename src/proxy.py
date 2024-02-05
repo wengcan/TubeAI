@@ -39,8 +39,6 @@ class Proxy:
         try:
             message_id = uuid.uuid4()
             type = message.get("type")
-            print(type)
-
             await self.__sio.emit('message', {"id": f'{message_id}'} , room=sid)
             if type == MessageType.DOWNLOAD.value:
                 url = message.get("url")
@@ -48,9 +46,7 @@ class Proxy:
                 await self.__sio.emit('message', {"id":f'{message_id}', 'url': url, 'video_id':  video_id} , room=sid)
             elif type == MessageType.SUMMARY.value:
                 video_id = message.get("video_id")
-                print(video_id)
                 result = self.__classes.get('langchain').query_documents(f'{video_id}/summaries')
-                print(result)
                 pass
             elif type ==  MessageType.CHAT.value:
                 response = self.__classes.get('gemini').generate_content(message.get("content"))
