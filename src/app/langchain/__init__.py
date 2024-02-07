@@ -54,6 +54,6 @@ class MyLangChain:
             summaries = chain.batch(docs, {"max_concurrency": 5})
             print(summaries)
             self.save_to_vectorstore(id_key=f'{id_key}/summaries', docs=summaries)
-    def query_documents(self,id_key: str) -> any:
-        print(id_key)
-        return self.__vectorstore.get()
+    # def query_documents(self,id_key: str) -> any:
+    #     print(id_key)
+    #     return self.__vectorstore.get()
