@@ -11,7 +11,7 @@ from langchain_core.documents import Document
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
-from src.utils import data_path, safety_settings
+from src.utils import chromadb_path, safety_settings
 
 class MyLangChain:
     __vectorstore = None
@@ -25,7 +25,7 @@ class MyLangChain:
         self.__vectorstore = Chroma(
             collection_name= MyLangChain.COLLECTION_NAME,
             embedding_function=GoogleGenerativeAIEmbeddings(model="models/embedding-001"),
-            persist_directory=os.path.join(data_path, 'chromadb')
+            persist_directory=chromadb_path
         )
 
     def id_exist(self, id: str) -> bool:
@@ -52,8 +52,8 @@ class MyLangChain:
                 | StrOutputParser()
             )
             summaries = chain.batch(docs, {"max_concurrency": 5})
-            print(summaries)
             self.save_to_vectorstore(id_key=f'{id_key}/summaries', docs=summaries)
+            return summaries
     # def query_documents(self,id_key: str) -> any:
     #     print(id_key)
     #     return self.__vectorstore.get()

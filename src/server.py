@@ -6,7 +6,10 @@ from .proxy import Proxy
 load_dotenv()
 
 
-sio = socketio.AsyncServer(cors_allowed_origins='*', async_mode='asgi', compress=True)
+sio = socketio.AsyncServer(logger=True, engineio_logger=True , cors_allowed_origins='*', async_mode='asgi', compress=True)
+
+
+
 app = socketio.ASGIApp(sio)
 
 
