@@ -57,9 +57,10 @@ class Proxy:
     async def __run_shortcut(self, id: str, name: str):
         if name == "summarize":
            return  await self.__summarize(id)
-    def __emit(self, event: str, data: Dict, room: str):
-        loop = asyncio.get_event_loop()
-        loop.create_task(self.__sio.emit(event, data , room=room))
+    async def __emit(self, event: str, data: Dict, room: str):
+        await self.__sio.emit(event, data , room=room)
+        await asyncio.sleep(0.0001)
+        
     async def handle_message(self,sid: str, message: dict):
         try:
             message_id = uuid.uuid4()
@@ -84,35 +85,46 @@ class Proxy:
             elif cmd == Command.SHORTCUT.value:
                 id = message.get("id")
                 name = message.get("name")
-                self.__emit('message', {
+                await self.__emit('message', {
                     "id": f'{message_id}', 
                     'status': OutBoundMessageStatus.ACCEPTED.value
                 } , room=sid)
                 resp_content = await self.__run_shortcut(id, name)
                 for content in resp_content:
-                    self.__emit('message', {
+                    await self.__emit('message', {
                         "id": f'{message_id}',
                         "content": content, 
                         'status': OutBoundMessageStatus.GENERATING.value
                     } , room=sid)
-                self.__emit('message', {
+                await self.__emit('message', {
                     "id": f'{message_id}',
                     'status': OutBoundMessageStatus.FINISHED.value
                 } , room=sid)
                 
             elif cmd ==  Command.CHAT.value:
-                await self.__sio.emit('message', {
+                await self.__emit('message', {
                     "id": f'{message_id}', 
                     'status': OutBoundMessageStatus.ACCEPTED.value
                 } , room=sid)
+
+                
                 response = self.__classes.get('gemini').generate_content(message.get("content"))
-                for chunk in response:
-                    await self.__sio.emit('message', {
-                        "id":f'{message_id}',
-                        "content":chunk.text, 
-                        'status': OutBoundMessageStatus.GENERATING.value
-                    } , room=sid)
-                await self.__sio.emit('message', {
+   
+                if 'candidates' in response:
+                    for candidate in response.candidates:
+                        await self.__emit('message', {
+                            "id":f'{message_id}',
+                            "content": "".join([part.text for part in candidate.content.parts]), 
+                            'status': OutBoundMessageStatus.GENERATING.value
+                        } , room=sid)
+                else:
+                    for chunk in response:
+                        await self.__emit('message', {
+                            "id":f'{message_id}',
+                            "content":chunk.text, 
+                            'status': OutBoundMessageStatus.GENERATING.value
+                        } , room=sid)
+                await self.__emit('message', {
                     "id": f'{message_id}',
                     'status': OutBoundMessageStatus.FINISHED.value
                 } , room=sid)
