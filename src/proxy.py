@@ -1,6 +1,7 @@
 import asyncio
 import importlib,os,uuid
 from enum import Enum
+
 from .utils import file_exist, extract_video_id, data_path, get_video_folder_path, get_vtt, get_info
 from pydantic import BaseModel
 from typing import Dict
@@ -43,16 +44,22 @@ class Proxy:
         return await get_info(folder_path=folder_path)
 
 
-    async def __summarize_youtube(self, video_id: str):
+    async def __youtube_summarize(self, video_id: str):
         folder = os.path.join(data_path, 'youtube', video_id)
         if self.__classes.get('langchain').id_exist(video_id) is not True: 
             vtt_contents = await get_vtt(folder)
             return self.__classes.get('langchain').add_documents(id_key=video_id,text=vtt_contents)
+    async def __youtube_qa(self, video_id: str, question: str):
+        return self.__classes.get('langchain').document_qa(id_key=video_id,question=question)
 
-    async def run_shortcut(self, url: str, name: str):
+    async def run_shortcut(self, url: str, name: str, question:str  = None):
         video_id = extract_video_id(url=url)
         if name == "summarize":
-           return  await self.__summarize_youtube(video_id)
+           return  await self.__youtube_summarize(video_id)
+        elif name == "qa":
+            if question is not None:
+                return await self.__youtube_qa(video_id=video_id, question=question)
+
         
     async def get_video_info(self, url: str) -> VideoInfo:
         video_id = await self.__download(url=url)

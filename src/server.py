@@ -1,5 +1,5 @@
 from fastapi import Depends, FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 from dotenv import load_dotenv
 from fastapi.responses import PlainTextResponse,StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,9 +28,14 @@ app.add_middleware(
 
 class Chat(BaseModel):
     content: str
+    
+class LoadRequest(BaseModel):
+    url: HttpUrl
+class ShortcutRequest(LoadRequest):
+    question: str = None
 
-
-name_list = ["summarize"]
+    
+name_list = ["summarize","qa"]
 def check_name(name: str):
     if name in name_list:
         return name
@@ -46,11 +51,17 @@ def read_root():
 async def chat(chat: Chat):
     return StreamingResponse(proxy.chat(chat.content))
 
-@app.get("/load")
-async def load(url: str):
-    return await proxy.get_video_info(url = url)
+@app.post("/load")
+async def load(load_request: LoadRequest):
+    return await proxy.get_video_info(url = str(load_request.url))
 
 
-@app.get("/shortcut/{name}")
-async def shortcut(url: str, name: str = Depends(check_name)):
-    return await proxy.run_shortcut(url = url, name="summarize")
+@app.post("/shortcut/{name}")
+async def shortcut(
+    short_request: ShortcutRequest,
+    name: str = Depends(check_name),
+):
+    if name == "summarize":
+        return await proxy.run_shortcut(url = str(short_request.url), name="summarize")
+    elif name == "qa":
+        return await proxy.run_shortcut(url=str(short_request.url), name="qa", question= short_request.question)
