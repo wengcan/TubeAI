@@ -1,32 +1,56 @@
-import asyncio
-import json,socketio
+from fastapi import Depends, FastAPI, HTTPException
+from pydantic import BaseModel
 from dotenv import load_dotenv
+from fastapi.responses import PlainTextResponse,StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from .proxy import Proxy
 
 load_dotenv()
-sio = socketio.AsyncServer(
-    # logger=True, 
-    # engineio_logger=True , 
-    cors_allowed_origins='*', 
-    async_mode='asgi', 
-    compress=True
+
+
+proxy = Proxy()
+app = FastAPI()
+origins = [
+    "http://localhost",
+    "http://localhost:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-app = socketio.ASGIApp(sio)
-proxy = Proxy(sio)
 
-@sio.event
-def connect(sid, environ):
-    print("connect ", sid)
 
-@sio.event
-def message(sid, data):
-    loop = asyncio.get_event_loop()
-    try:
-        loop.create_task(proxy.handle_message(sid= sid, message=json.loads(data)))
-        #await sio.emit('response', f"Received your message: {data}", room=sid)
-    except Exception as e:
-        print(e)
 
-@sio.event
-def disconnect(sid):
-    print('disconnect ', sid)
+
+class Chat(BaseModel):
+    content: str
+
+
+name_list = ["summarize"]
+def check_name(name: str):
+    if name in name_list:
+        return name
+    else:
+        raise HTTPException(status_code=404, detail=f"Name '{name}' not found in the list.")
+
+
+@app.get("/ping",response_class=PlainTextResponse)
+def read_root():
+    return "pong"
+
+@app.post("/chat")
+async def chat(chat: Chat):
+    return StreamingResponse(proxy.chat(chat.content))
+
+@app.get("/load")
+async def load(url: str):
+    return await proxy.get_video_info(url = url)
+
+
+@app.get("/shortcut/{name}")
+async def shortcut(url: str, name: str = Depends(check_name)):
+    return await proxy.run_shortcut(url = url, name="summarize")
