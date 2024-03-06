@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from fastapi.responses import PlainTextResponse,StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from .proxy import Proxy
+from .proxy import shortcuts
 
 load_dotenv()
 
@@ -35,7 +36,9 @@ class ShortcutRequest(LoadRequest):
     question: str = None
 
     
-name_list = ["summarize","qa"]
+name_list = list(shortcuts.keys())
+
+print(name_list)
 def check_name(name: str):
     if name in name_list:
         return name
@@ -61,7 +64,7 @@ async def shortcut(
     short_request: ShortcutRequest,
     name: str = Depends(check_name),
 ):
-    if name == "summarize":
-        return await proxy.run_shortcut(url = str(short_request.url), name="summarize")
+    if name in ["summarize", "keywords", "comments"]:
+        return await proxy.run_shortcut(url = str(short_request.url), name=name)
     elif name == "qa":
         return await proxy.run_shortcut(url=str(short_request.url), name="qa", question= short_request.question)
