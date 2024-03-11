@@ -1,11 +1,12 @@
 import asyncio
 import importlib,os,uuid
 from typing import Dict, Type
-from enum import Enum
-
-from .utils import file_exist, extract_video_id, data_path, get_video_folder_path, get_vtt, get_info
 from pydantic import BaseModel
+from .utils import file_exist, extract_video_id, data_path, get_video_folder_path, get_vtt, get_info
+
 from typing import Dict
+
+from .config import shortcut_instance
 
 
 class VideoInfo(BaseModel):
@@ -18,12 +19,6 @@ class VideoInfo(BaseModel):
             thumbnail=data[1],
             description=data[2]
     )
-        
-shortcuts = {
-    "summarize": "summarize the following document",
-    "keywords": "write 10 keywords for the following document",
-    "comments": "write 10 comments for the following document"
-}
 
 class Proxy:
     __classes: Dict[str, Type] = {}
@@ -59,19 +54,21 @@ class Proxy:
         vtt_contents = await get_vtt(folder)
         self.__classes.get('langchain').save_text_to_vectorstore(collection_name=video_id,text=vtt_contents)
             
-    async def __youtube_qa(self, video_id: str, question: str):
-        return self.__classes.get('langchain').document_qa(collection_name=video_id,question=question)
 
-    async def run_shortcut(self, url: str, name: str, question:str  = None):
+    async def run_shortcut(self, url: str, name: str, lang: str):
         video_id = extract_video_id(url=url)
-        if name in ["summarize", "keywords", "comments"]:
-           return self.__classes.get('langchain').document_chat(collection_name=video_id,template = shortcuts[name])
-        elif name == "qa":
-            if question is not None:
-                return await self.__youtube_qa(video_id=video_id, question=question)
-
-
-        
+        shortcut = shortcut_instance[name]
+        return self.__classes.get('langchain').chat(
+                collection_name=video_id,
+                prompt=shortcut.prompt,
+                refine_prompt=shortcut.refine_prompt,
+                lang = lang
+            )
+    # async def run_qa(self, url: str, question:str  = None):
+    #     video_id = extract_video_id(url=url)
+    #     if question is not None:
+    #         return await self.__classes.get('langchain').qa(collection_name=video_id,question=question)
+    
     async def get_video_info(self, url: str) -> VideoInfo:
         loop = asyncio.get_event_loop()
         video_id = await self.__download(url=url)
