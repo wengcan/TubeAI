@@ -63,7 +63,8 @@ async def shortcut(
     request: BaseRequest,
     name: str = Depends(check_name),
 ):
-    return await proxy.run_shortcut(url = str(request.url), name=name, lang= languages[request.lang])
+    resp = proxy.run_shortcut(url = str(request.url), name=name, lang= languages[request.lang])
+    return StreamingResponse(resp)
 
 # @app.post("/qa")
 # async def shortcut(

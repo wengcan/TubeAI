@@ -1,5 +1,5 @@
 import unittest
-from src.utils import extract_video_id
+from app.langchain import extract_video_id
 
 class TestURL(unittest.TestCase):
     def test_youtube_url(self):

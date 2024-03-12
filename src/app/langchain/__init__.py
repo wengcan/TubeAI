@@ -1,35 +1,35 @@
+from typing import Dict
 from enum import Enum
 import os,uuid
 from typing import List,Tuple
 import chromadb
-import google.generativeai as genai
+from google.generativeai.types import generation_types
 from langchain.storage import InMemoryByteStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.retrievers.multi_vector import MultiVectorRetriever
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-from langchain.prompts import ChatPromptTemplate,PromptTemplate
+from langchain.prompts import PromptTemplate,ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains import LLMChain
 from langchain.chains import RetrievalQA
-from langchain.chains.summarize import load_summarize_chain
      
-
-from src.utils import chromadb_path, safety_settings
+from .settings import safety_settings
 from .Doctype import Doctype
 
 class MyLangChain:
     __llm = None
     __persistent_client = None
-
     __store = None
-
     __splitters = []
 
-    def __init__(self) -> None:
-        self.__llm = ChatGoogleGenerativeAI(model="gemini-pro", safety_settings=safety_settings)
+    def __init__(self, config: Dict[str, str]) -> None:
+        self.__llm = ChatGoogleGenerativeAI(
+            model="gemini-pro", 
+            safety_settings=safety_settings, 
+            convert_system_message_to_human=True
+        )
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=5000, 
             chunk_overlap=0
@@ -40,8 +40,7 @@ class MyLangChain:
         )      
         self.__splitters = [self.text_splitter, self.child_text_splitter] 
         self.__store = InMemoryByteStore()
-        self.__persistent_client = chromadb.PersistentClient(path=chromadb_path)
-
+        self.__persistent_client = chromadb.PersistentClient(path=config.get("chromadb_path"))
 
     def get_collection(self, collection_name:  str) -> chromadb.Collection | None:
         try:
@@ -113,14 +112,12 @@ class MyLangChain:
             self.__merge_documents(documents[0:half_n], new_documents)
             self.__merge_documents(documents[half_n:n], new_documents)                
 
-    def chat(self, collection_name:  str, prompt: str, refine_prompt, lang: str):
+    def template_chat(self, collection_name:  str, prompt: str, refine_prompt, lang: str):
         collection = self.get_collection(collection_name=collection_name)
         result = collection.get(
             where={"doc_type": Doctype.full.value}
         )
         documents = result.get("documents")
-
-        print(documents)
 
         chain = (
             {"doc": lambda x : x}
@@ -129,21 +126,29 @@ class MyLangChain:
             | StrOutputParser()
         )
         temp = chain.batch(documents, {"max_concurrency": 5})
-
-        llm_chain = LLMChain(llm=self.__llm, prompt=PromptTemplate(
-            input_variables=["existing_answer", "text", "lang"],
-            template=refine_prompt
-        ))
-
-        res = llm_chain.invoke({
+        llm_chain = (
+            PromptTemplate.from_template(refine_prompt)
+            | self.__llm
+            | StrOutputParser()
+        )
+        return llm_chain.stream({
             "existing_answer": temp,
             "text": "",
             "lang": lang
         })
+    def chat(self, content: str):
+        messages : List[str] = [
+            ("human", "{user_input}")
+        ]
+        llm_chain = (
+            ChatPromptTemplate.from_messages(messages)
+            | self.__llm
+            | StrOutputParser()
+        )
+        return llm_chain.stream({
+            "user_input": content
+        })
 
-        return res.get("text")
-
-   
     # def qa(self, collection_name: str, question: str)-> None:
     #     id_key = 'doc_id'
     #     template = (

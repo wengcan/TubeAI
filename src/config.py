@@ -1,5 +1,13 @@
+import os
 from enum import Enum
 from pydantic import BaseModel
+
+
+env_path = os.getenv('DATA_PATH')
+data_path = os.path.join(os.path.abspath(os.curdir), 'data') if env_path is None else env_path
+chromadb_path = os.path.join(data_path, 'chromadb')
+
+
 languages = {
   "ar": "Arabic",
   "bn": "Bengali",

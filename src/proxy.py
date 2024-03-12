@@ -6,7 +6,7 @@ from .utils import file_exist, extract_video_id, data_path, get_video_folder_pat
 
 from typing import Dict
 
-from .config import shortcut_instance
+from .config import shortcut_instance, chromadb_path, data_path
 
 
 class VideoInfo(BaseModel):
@@ -21,6 +21,10 @@ class VideoInfo(BaseModel):
     )
 
 class Proxy:
+    __config: Dict[str, str] = {
+        "chromadb_path": chromadb_path,
+        "data_path": data_path
+    }
     __classes: Dict[str, Type] = {}
     def __init__(self) -> None:
         for module_name in os.listdir(os.path.join(os.path.abspath(os.curdir), 'src', 'app')):
@@ -28,15 +32,14 @@ class Proxy:
             for name in dir(module):
                 obj = getattr(module, name)
                 if hasattr(obj, "__module__") and obj.__module__ == f"src.app.{module_name}" and hasattr(obj, "__class__"):
-                    instance = obj()
+                    instance = obj(self.__config)
                     self.__classes[module_name] = instance
                     class_type = type(instance)
                     setattr(self, f"{module_name}_{name}_type", class_type)                       
     async def chat(self, message_content: str):
-        response = self.__classes.get('gemini').generate_content(message_content)
-        for chunk in response:
-            await asyncio.sleep(0.001)
-            yield chunk.text
+        for chunk in self.__classes.get('langchain').chat(message_content):
+            await asyncio.sleep(0.01)
+            yield  chunk
         
     async def __download(self, url: str):
         video_id = extract_video_id(url=url)
@@ -58,12 +61,14 @@ class Proxy:
     async def run_shortcut(self, url: str, name: str, lang: str):
         video_id = extract_video_id(url=url)
         shortcut = shortcut_instance[name]
-        return self.__classes.get('langchain').chat(
+        for chunk  in self.__classes.get('langchain').template_chat(
                 collection_name=video_id,
                 prompt=shortcut.prompt,
                 refine_prompt=shortcut.refine_prompt,
                 lang = lang
-            )
+            ):
+            await asyncio.sleep(0.01)
+            yield  chunk
     # async def run_qa(self, url: str, question:str  = None):
     #     video_id = extract_video_id(url=url)
     #     if question is not None:
