@@ -96,7 +96,7 @@ shortcut_data = {
         )
     },
     "comments": {
-        "prompt": """Write some comments of the following:
+        "prompt": """Write some short comments of the following:
         {doc}
         CONCISE COMMENTS:""",
         "refine_prompt": (
@@ -115,5 +115,18 @@ shortcut_data = {
 }
 
 shortcut_keys = shortcut_data.keys()
+
+qa_prompt = (
+    "Use the following pieces of context to answer the question at the end. \n"
+    "If you don't know the answer, just say that you don't know, don't try to make up an answer.\n" 
+    "Use three sentences maximum. Keep the answer as concise as possible. \n" 
+    "Always say \"thanks for asking!\" at the end of the answer."
+    "the ranswer should be in {lang}"
+    "------------\n"
+    "{context}\n"
+    "------------\n"            
+    "Question: {question}"
+    "Helpful Answer:"
+)
 
 shortcut_instance = dict(Shortcut(**shortcut_data))

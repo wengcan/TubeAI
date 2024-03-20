@@ -69,10 +69,10 @@ class Proxy:
             ):
             await asyncio.sleep(0.01)
             yield  chunk
-    # async def run_qa(self, url: str, question:str  = None):
-    #     video_id = extract_video_id(url=url)
-    #     if question is not None:
-    #         return await self.__classes.get('langchain').qa(collection_name=video_id,question=question)
+    async def run_qa(self, url: str, question:str  = None):
+        video_id = extract_video_id(url=url)
+        if question is not None:
+            return await self.__classes.get('langchain').qa(collection_name=video_id,question=question)
     
     async def get_video_info(self, url: str) -> VideoInfo:
         loop = asyncio.get_event_loop()

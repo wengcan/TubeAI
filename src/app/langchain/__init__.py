@@ -61,21 +61,30 @@ class MyLangChain:
             id_key=id_key,
         )
     
-    def __create_documents(self,  document_type: Doctype,  docs:  List[str]) -> Tuple[List[str], List[Document]]:
-        doc_ids = [str(uuid.uuid4()) for _ in docs]
-        documents = self.__splitters[document_type.value].create_documents(
-            texts= docs,
-            metadatas= [
-                {
-                    'doc_id': doc_id,
-                    'index': id,
-                    'doc_type': document_type.value
-                } for id, doc_id in enumerate(doc_ids)
-            ]
-        )
-        return (doc_ids, documents)
+    # def __create_documents(self,  document_type: Doctype,  docs:  List[str]) -> Tuple[List[str], List[Document]]:
+    #     doc_ids = [str(uuid.uuid4()) for _ in docs]
+    
+    #     documents = self.__splitters[document_type.value].create_documents(
+    #         texts= docs,
+    #         metadatas= [
+    #             {
+    #                 'doc_id': doc_id,
+    #                 'index': id,
+    #                 'doc_type': document_type.value
+    #             } for id, doc_id in enumerate(doc_ids)
+    #         ]
+    #     )
+    #     return (doc_ids, documents)
     def __save(self, collection_name: str,  doc_ids: List[str] , full_documents:List[Document]) -> None:
         retriever =self.__get_retriever(collection_name, id_key= 'doc_id')
+        result = retriever.vectorstore.get(
+            where={"doc_type": Doctype.full.value}
+        )
+       
+        if len(result.get("ids")) > 0:
+            return
+
+        # 
         retriever.vectorstore.add_documents(full_documents)
         retriever.docstore.mset(list(zip(doc_ids, full_documents)))
     def save_text_to_vectorstore(self, collection_name: str, text: str) -> List[str]:
@@ -83,6 +92,19 @@ class MyLangChain:
             docs = self.text_splitter.split_text(text)
             documents = []
             self.__merge_documents(docs, documents)
+
+            full_documents = [
+                Document(
+                    page_content=page_content,
+                    metadata={
+                        'doc_id': 'doc_id',
+                        'index': id,
+                        'doc_type':  Doctype.full.value
+                    }
+                ) for id, page_content  in enumerate(documents)
+            ]
+            doc_ids = [str(uuid.uuid4()) for _ in documents]
+
         
             # doc_ids = [str(uuid.uuid4()) for _ in docs]
             # id_key= 'doc_id'
@@ -96,7 +118,8 @@ class MyLangChain:
             #     ) for index, page_content in enumerate(documents)
             # ]
 
-            doc_ids, full_documents = self.__create_documents(document_type=Doctype.full, docs= docs)
+            # print(self.__llm.client.count_tokens(documents[0]))
+            # doc_ids, full_documents = self.__create_documents(document_type=Doctype.full, docs= documents)
             self.__save(collection_name, doc_ids=doc_ids, full_documents= full_documents)
             
     def __merge_documents(self, documents: List[str], new_documents: List[str] = [] ) -> None:
@@ -118,7 +141,6 @@ class MyLangChain:
             where={"doc_type": Doctype.full.value}
         )
         documents = result.get("documents")
-
         chain = (
             {"doc": lambda x : x}
             | PromptTemplate.from_template(prompt)
@@ -149,27 +171,16 @@ class MyLangChain:
             "user_input": content
         })
 
-    # def qa(self, collection_name: str, question: str)-> None:
-    #     id_key = 'doc_id'
-    #     template = (
-    #         "Use the following pieces of context to answer the question at the end. \n"
-    #         "If you don't know the answer, just say that you don't know, don't try to make up an answer.\n" 
-    #         "Use three sentences maximum. Keep the answer as concise as possible. \n" 
-    #         "Always say \"thanks for asking!\" at the end of the answer."
-    #         "------------\n"
-    #         "{context}\n"
-    #         "------------\n"            
-    #         "Question: {question}"
-    #         "Helpful Answer:"
-    #     )
-    #     retriever =self.__get_retriever(collection_name, id_key= id_key)
-    #     result = retriever.vectorstore.similarity_search(question)
-    #     QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
-    #     qa_chain = RetrievalQA.from_chain_type(
-    #         ChatGoogleGenerativeAI(model="gemini-pro", safety_settings=safety_settings),
-    #         retriever=retriever.vectorstore.as_retriever(),
-    #         return_source_documents=True,
-    #         chain_type_kwargs={"prompt": QA_CHAIN_PROMPT}
-    #     )
-    #     result = qa_chain.invoke({"query": question})
-    #     return result["result"]
+    def qa(self, collection_name: str, template: str, question: str)-> None:
+        id_key = 'doc_id'
+        retriever =self.__get_retriever(collection_name, id_key= id_key)
+        # result = retriever.vectorstore.similarity_search(question)
+        QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
+        qa_chain = RetrievalQA.from_chain_type(
+            self.__llm,
+            retriever=retriever.vectorstore.as_retriever(),
+            return_source_documents=True,
+            chain_type_kwargs={"prompt": QA_CHAIN_PROMPT}
+        )
+        result = qa_chain.invoke({"query": question})
+        return result["result"]
